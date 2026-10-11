@@ -2,3 +2,10 @@
 .cocoindex_code/
 .ruff_cache/
 node_modules/
+bin/
+.env
+.env.*
+!.env.example
+mise.local.toml
+coverage.out
+dist/

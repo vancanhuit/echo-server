@@ -4,3 +4,93 @@ go = "1.27.2"
 "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "2.8.0"
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.8.0"
 golangci-lint = "2.14.0"
+goreleaser = "2.18.3"
+actionlint = "1.7.12"
+
+[env]
+PORT = { default = "8080" }
+LOGS__LEVEL = { default = "info" }
+_.file = ".env"
+
+[tasks.setup]
+description = "Download Go modules and install commit hooks"
+run = ["go mod download", "bun install --frozen-lockfile"]
+
+[tasks.dev]
+description = "Run the echo server"
+run = "go run ./cmd/echo-server"
+
+[tasks.build]
+description = "Build the standalone binary"
+run = "sh scripts/build.sh binary"
+
+[tasks.generate]
+description = "Generate Go models from OpenAPI"
+run = "go generate ./api"
+
+[tasks."generate:check"]
+description = "Verify generated models are up to date"
+run = "oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml | diff -u api/models.gen.go -"
+
+[tasks.fmt]
+description = "Format Go source"
+run = "gofmt -w cmd internal api"
+
+[tasks.test]
+description = "Run tests with the race detector"
+run = "go test -race -count=1 ./..."
+
+[tasks.lint]
+description = "Run golangci-lint"
+run = "golangci-lint run"
+
+[tasks.vuln]
+description = "Check dependencies for known vulnerabilities"
+run = "govulncheck ./..."
+
+[tasks.check]
+description = "Run tests, lint, and generated-code checks"
+depends = ["test", "lint", "generate:check", "release:check", "workflows:check"]
+
+[tasks."docker:build"]
+description = "Build the container image"
+run = "sh scripts/build.sh docker"
+
+[tasks."workflows:check"]
+description = "Validate GitHub Actions workflows"
+run = "actionlint"
+
+[tasks."release:check"]
+description = "Validate GoReleaser configuration"
+run = "goreleaser check"
+
+[tasks."release:snapshot"]
+description = "Build release archives locally without publishing"
+run = "goreleaser release --snapshot --clean --parallelism 2"
+
+[tasks.release]
+description = "Publish a semantic-version Git tag as a GitHub Release"
+depends = ["check", "vuln"]
+run = "goreleaser release --clean --parallelism 2"
+
+[tasks."docker:publish"]
+description = "Build and publish the versioned image to GHCR (requires VERSION and docker login)"
+run = '''
+set -eu
+: "${VERSION:?Set VERSION to a semantic tag such as v1.1.0}"
+export VERSION
+mise run docker:build
+docker tag echo-server:local "ghcr.io/vancanhuit/echo-server:$VERSION"
+docker push "ghcr.io/vancanhuit/echo-server:$VERSION"
+'''
+
+[tasks.ci]
+description = "Run the same complete validation and builds as GitHub Actions"
+run = [
+  "mise run setup",
+  "mise run check",
+  "mise run vuln",
+  "mise run build",
+  "mise run release:snapshot",
+  "mise run docker:build",
+]

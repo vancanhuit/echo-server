@@ -1,0 +1,45 @@
+version: 2
+project_name: echo-server
+
+builds:
+  - id: echo-server
+    main: ./cmd/echo-server
+    binary: echo-server
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - >-
+        -s -w
+        -X github.com/vancanhuit/echo-server/internal/buildinfo.Version=v{{ .Version }}
+        -X github.com/vancanhuit/echo-server/internal/buildinfo.Commit={{ .FullCommit }}
+        -X github.com/vancanhuit/echo-server/internal/buildinfo.Date={{ .Date }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: '{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE.txt
+      - README.md
+      - api/openapi.yaml
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+
+release:
+  github:
+    owner: vancanhuit
+    name: echo-server
+  name_template: '{{ .Tag }}'
+  prerelease: auto
+  extra_files:
+    - glob: api/openapi.yaml

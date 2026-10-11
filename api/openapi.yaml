@@ -1,0 +1,288 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://spec.openapis.org/oas/3.1/dialect/base
+info:
+  title: Echo Server
+  version: 1.0.0
+  description: |
+    Go port of Ealenn/Echo-Server. Every path and HTTP method echoes request
+    metadata. GET /openapi.yaml is reserved for this specification; /ping is
+    an ordinary echo route. No authentication is performed.
+
+    Body parsers accept JSON objects/arrays (application/json and
+    application/ld+json), text/plain, URL-encoded forms, and multipart fields
+    on every method. Missing or unsupported body types become {}. Multipart
+    file uploads are rejected. Bodies are limited to 1 MiB after decompression;
+    gzip and deflate are accepted. Repeated query/form keys become arrays;
+    bracket notation is kept as literal keys.
+
+    Status and response-header query controls override their header controls.
+    Body, environment, file, and delay controls prefer the header. Invalid
+    delays fall back to the query; invalid status candidates are ignored.
+    Body priority is file > environment > custom body > request echo.
+    Configuration can rename all control parameters and disable features.
+
+    Every response supplies X-Request-ID, preserving the request header when
+    provided or generating a new ID. JSON logs include request_id.
+    Gzip, security headers, CORS, rate limiting, and context timeouts are opt-in.
+    When enabled, CORS handles allowed browser preflights with 204, per-peer
+    rate limiting can return 429 with Retry-After, and an interrupted echo delay
+    returns 503 on context timeout. Context timeouts are cooperative, not hard
+    I/O deadlines. Custom response-header controls can override middleware headers.
+
+    File and environment access are enabled by default for upstream compatibility.
+    These expose the process environment and files readable by the process.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: echo
+    description: Request inspection and response controls
+  - name: documentation
+    description: Embedded API specification
+paths:
+  /:
+    parameters: &controls
+      - $ref: '#/components/parameters/RequestID'
+      - $ref: '#/components/parameters/CodeQuery'
+      - $ref: '#/components/parameters/CodeHeader'
+      - $ref: '#/components/parameters/BodyQuery'
+      - $ref: '#/components/parameters/BodyHeader'
+      - $ref: '#/components/parameters/EnvQuery'
+      - $ref: '#/components/parameters/EnvHeader'
+      - $ref: '#/components/parameters/HeadersQuery'
+      - $ref: '#/components/parameters/HeadersHeader'
+      - $ref: '#/components/parameters/TimeQuery'
+      - $ref: '#/components/parameters/TimeHeader'
+      - $ref: '#/components/parameters/FileQuery'
+      - $ref: '#/components/parameters/FileHeader'
+    get: &echo
+      tags: [echo]
+      summary: Echo the request or return a controlled response
+      responses:
+        '200':
+          $ref: '#/components/responses/Echo'
+        default:
+          $ref: '#/components/responses/Echo'
+    post: &echoBody
+      <<: *echo
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {}
+          application/ld+json:
+            schema: {}
+          text/plain:
+            schema: {type: string}
+          application/x-www-form-urlencoded:
+            schema: {type: object, additionalProperties: true}
+          multipart/form-data:
+            schema: {type: object, additionalProperties: true}
+    put: *echoBody
+    patch: *echoBody
+    delete: *echoBody
+    options: *echo
+    trace: *echo
+    head: &head
+      tags: [echo]
+      summary: Return controlled status and headers without a body
+      responses:
+        default:
+          description: Selected status; no response body
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+  /{path}:
+    description: |
+      The runtime wildcard also accepts multiple path segments and nonstandard
+      HTTP methods. OpenAPI path parameters describe only a single segment.
+    parameters:
+      - $ref: '#/components/parameters/RequestID'
+      - name: path
+        in: path
+        required: true
+        schema: {type: string}
+      - $ref: '#/components/parameters/CodeQuery'
+      - $ref: '#/components/parameters/CodeHeader'
+      - $ref: '#/components/parameters/BodyQuery'
+      - $ref: '#/components/parameters/BodyHeader'
+      - $ref: '#/components/parameters/EnvQuery'
+      - $ref: '#/components/parameters/EnvHeader'
+      - $ref: '#/components/parameters/HeadersQuery'
+      - $ref: '#/components/parameters/HeadersHeader'
+      - $ref: '#/components/parameters/TimeQuery'
+      - $ref: '#/components/parameters/TimeHeader'
+      - $ref: '#/components/parameters/FileQuery'
+      - $ref: '#/components/parameters/FileHeader'
+    get: *echo
+    post: *echoBody
+    put: *echoBody
+    patch: *echoBody
+    delete: *echoBody
+    options: *echo
+    trace: *echo
+    head: *head
+  /openapi.yaml:
+    get:
+      tags: [documentation]
+      operationId: getOpenAPI
+      summary: Download this specification
+      responses:
+        '200':
+          description: Embedded OpenAPI document
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+          content:
+            application/yaml:
+              schema: {type: string}
+    head:
+      tags: [documentation]
+      operationId: headOpenAPI
+      summary: Check that the specification is available
+      responses:
+        '200':
+          description: No response body
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+components:
+  headers:
+    RequestID:
+      description: Incoming request ID or a generated unique ID; also included in JSON logs.
+      schema: {type: string}
+  parameters:
+    RequestID:
+      name: X-Request-ID
+      in: header
+      description: Optional diagnostic correlation ID. A new ID is generated when omitted.
+      schema: {type: string}
+    CodeQuery:
+      name: echo_code
+      in: query
+      description: Hyphen-separated candidates from 200 to 599; chosen randomly. Invalid candidates are ignored.
+      schema: {type: string, example: '200-404-500'}
+    CodeHeader:
+      name: X-ECHO-CODE
+      in: header
+      description: Same as echo_code; a valid query takes precedence.
+      schema: {type: string}
+    BodyQuery:
+      name: echo_body
+      in: query
+      description: Valid JSON is returned as JSON; other input is returned as a JSON string.
+      schema: {type: string}
+    BodyHeader:
+      name: X-ECHO-BODY
+      in: header
+      description: Same as echo_body; takes precedence over the query.
+      schema: {type: string}
+    EnvQuery:
+      name: echo_env_body
+      in: query
+      description: Environment variable name; absent variables return an empty body. Requires environment enabled.
+      schema: {type: string}
+    EnvHeader:
+      name: X-ECHO-ENV-BODY
+      in: header
+      description: Same as echo_env_body; takes precedence over the query.
+      schema: {type: string}
+    HeadersQuery:
+      name: echo_header
+      in: query
+      description: "Comma-space-separated headers, e.g. One:1, Two:2. Query overwrites header values. Framing headers and invalid syntax return 400. Requires header enabled."
+      schema: {type: string}
+    HeadersHeader:
+      name: X-ECHO-HEADER
+      in: header
+      description: Same as echo_header; applied before query overrides.
+      schema: {type: string}
+    TimeQuery:
+      name: echo_time
+      in: query
+      description: Delay in milliseconds, between configured min/max (defaults 0/60000). Invalid values are ignored.
+      schema: {type: number, minimum: 0, maximum: 60000}
+    TimeHeader:
+      name: X-ECHO-TIME
+      in: header
+      description: Same as echo_time; a valid nonzero header takes precedence.
+      schema: {type: number, minimum: 0, maximum: 60000}
+    FileQuery:
+      name: echo_file
+      in: query
+      description: Absolute or working-directory-relative path. Directories return sorted names; regular files return text with status 200. Requires file enabled.
+      schema: {type: string}
+    FileHeader:
+      name: X-ECHO-FILE
+      in: header
+      description: Same as echo_file; takes precedence over the query.
+      schema: {type: string}
+  responses:
+    Echo:
+      description: |
+        Default EchoResponse, arbitrary JSON controlled body, directory listing,
+        or text file. Status controls may select any 200–599 status. HEAD,
+        204, 205 and 304 have no body. Missing files return 404 with {error: ...}.
+        Malformed bodies/headers return 400, oversized bodies 413, unsupported
+        content encodings 415, and internal errors 500 with {message: ...}.
+        Optional rate limiting returns 429 and optional context timeout returns
+        503 when a context-aware handler exceeds its deadline.
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+        Retry-After:
+          description: Seconds before retrying after rate limiting, when enabled.
+          schema: {type: integer, minimum: 0}
+        Content-Encoding:
+          description: gzip when optional gzip middleware compresses the response.
+          schema: {type: string}
+        X-ECHO-RANDOM-STATUS:
+          description: Valid status candidates, comma-space separated; configurable.
+          schema: {type: string}
+      content:
+        application/json:
+          schema:
+            description: EchoResponse by default; controls can return any JSON value.
+            anyOf:
+              - $ref: '#/components/schemas/EchoResponse'
+              - {}
+            x-go-type: any
+        text/plain:
+          schema: {type: string}
+  schemas:
+    EchoResponse:
+      type: object
+      properties:
+        host: {$ref: '#/components/schemas/Host'}
+        http: {$ref: '#/components/schemas/HTTP'}
+        request: {$ref: '#/components/schemas/Request'}
+        environment:
+          type: object
+          additionalProperties: {type: string}
+    Host:
+      type: object
+      required: [hostname, ip, ips]
+      properties:
+        hostname: {type: string}
+        ip: {type: string}
+        ips:
+          type: array
+          description: Empty; forwarded headers are not trusted.
+          items: {type: string}
+    HTTP:
+      type: object
+      required: [method, baseUrl, originalUrl, protocol]
+      properties:
+        method: {type: string}
+        baseUrl: {type: string, example: ''}
+        originalUrl: {type: string, example: '/hello?name=world'}
+        protocol: {type: string, enum: [http, https]}
+    Request:
+      type: object
+      required: [params, query, cookies, body, headers]
+      properties:
+        params: {type: object, additionalProperties: true}
+        query: {type: object, additionalProperties: true}
+        cookies:
+          description: Cookie object, or an empty array when cookies are disabled.
+        body: {}
+        headers: {type: object, additionalProperties: true}
