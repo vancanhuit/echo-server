@@ -103,6 +103,14 @@ url = "https://dl.google.com/go/go1.27.2.windows-amd64.zip"
 checksum = "sha256:1314008898bd40df77af4b014f777f08873dbdfbcd3d92308728ee03304fe04f"
 url = "https://dl.google.com/go/go1.27.2.windows-amd64.zip"
 
+[[tools."go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen"]]
+version = "2.8.0"
+backend = "go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen"
+specifiers = [
+    "2.8.0",
+    "latest",
+]
+
 [[tools."go:golang.org/x/vuln/cmd/govulncheck"]]
 version = "1.8.0"
 backend = "go:golang.org/x/vuln/cmd/govulncheck"
