@@ -15,7 +15,7 @@ func TestConfiguration(t *testing.T) {
 	if cfg.Port != 80 || !cfg.Environment || !cfg.File || cfg.MaxDelay != time.Minute || cfg.BodyCommand.Query != "echo_body" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
-	env := map[string]string{"PORT": "9090", "ENABLE__COOKIES": "false", "COMMANDS__HTTPBODY__QUERY": "body", "COMMANDS__HTTPCODE__HEADERRESPONSE": "false"}
+	env := map[string]string{"PORT": "9090", "ENABLE_COOKIES": "false", "COMMANDS_HTTPBODY_QUERY": "body", "COMMANDS_HTTPCODE_HEADERRESPONSE": "false"}
 	cfg, err = LoadConfig([]string{"--port", "8081"}, func(key string) string { return env[key] }, io.Discard)
 	if err != nil {
 		t.Fatal(err)

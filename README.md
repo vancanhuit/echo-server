@@ -60,39 +60,41 @@ lowercase headers. Forwarded headers are echoed but not trusted for IP/protocol.
 
 Runtime configuration is environment-based, with upstream-style colon-separated
 flags overriding environment values. Boolean flags use `=false` or `=true`.
+Environment names use a single underscore between configuration segments,
+for example `LOGS_LEVEL` and `MIDDLEWARE_CORS_ORIGINS`.
 
 ```sh
 mise exec -- go run ./cmd/echo-server --port=9090 --enable:cookies=false
 ```
 
 [mise](https://mise.jdx.dev/environments/) supplies default `PORT=8080` and
-`LOGS__LEVEL=info`, preserves existing shell values, and loads optional `.env`
+`LOGS_LEVEL=info`, preserves existing shell values, and loads optional `.env`
 overrides. The binary itself does not read dotenv files. Local mise overrides
 can also go in ignored `mise.local.toml`.
 
 | Environment variable | Binary default | CLI flag |
 | --- | --- | --- |
 | `PORT` | `80` | `--port` |
-| `ENABLE__HOST` | `true` | `--enable:host` |
-| `ENABLE__HTTP` | `true` | `--enable:http` |
-| `ENABLE__REQUEST` | `true` | `--enable:request` |
-| `ENABLE__COOKIES` | `true` | `--enable:cookies` |
-| `ENABLE__HEADER` | `true` | `--enable:header` |
-| `ENABLE__ENVIRONMENT` | `true` | `--enable:environment` |
-| `ENABLE__FILE` | `true` | `--enable:file` |
-| `CONTROLS__TIMES__MIN` | `0` | `--controls:times:min` |
-| `CONTROLS__TIMES__MAX` | `60000` | `--controls:times:max` |
-| `COMMANDS__HTTPCODE__HEADERRESPONSE` | `true` | `--commands:httpCode:headerResponse` |
-| `LOGS__APP` | `echo-server` | `--logs:app` |
-| `LOGS__LEVEL` | `debug` | `--logs:level` |
-| `LOGS__FORMAT` | `default` | `--logs:format` |
-| `LOGS__IGNORE__PING` | `false` | `--logs:ignore:ping` |
+| `ENABLE_HOST` | `true` | `--enable:host` |
+| `ENABLE_HTTP` | `true` | `--enable:http` |
+| `ENABLE_REQUEST` | `true` | `--enable:request` |
+| `ENABLE_COOKIES` | `true` | `--enable:cookies` |
+| `ENABLE_HEADER` | `true` | `--enable:header` |
+| `ENABLE_ENVIRONMENT` | `true` | `--enable:environment` |
+| `ENABLE_FILE` | `true` | `--enable:file` |
+| `CONTROLS_TIMES_MIN` | `0` | `--controls:times:min` |
+| `CONTROLS_TIMES_MAX` | `60000` | `--controls:times:max` |
+| `COMMANDS_HTTPCODE_HEADERRESPONSE` | `true` | `--commands:httpCode:headerResponse` |
+| `LOGS_APP` | `echo-server` | `--logs:app` |
+| `LOGS_LEVEL` | `debug` | `--logs:level` |
+| `LOGS_FORMAT` | `default` | `--logs:format` |
+| `LOGS_IGNORE_PING` | `false` | `--logs:ignore:ping` |
 
-`ENABLE__HEADER` controls custom response headers, not echoed request headers.
+`ENABLE_HEADER` controls custom response headers, not echoed request headers.
 Disabling cookies produces `cookies: []` and removes the echoed `cookie` header.
 Disabling environment also disables `echo_env_body`.
 
-Every command supports `COMMANDS__<NAME>__QUERY` and `COMMANDS__<NAME>__HEADER`:
+Every command supports `COMMANDS_<NAME>_QUERY` and `COMMANDS_<NAME>_HEADER`:
 
 | NAME | CLI name | Default query | Default header |
 | --- | --- | --- | --- |
@@ -103,7 +105,7 @@ Every command supports `COMMANDS__<NAME>__QUERY` and `COMMANDS__<NAME>__HEADER`:
 | `TIME` | `time` | `echo_time` | `x-echo-time` |
 | `FILE` | `file` | `echo_file` | `x-echo-file` |
 
-For example, `COMMANDS__HTTPBODY__QUERY=body` or
+For example, `COMMANDS_HTTPBODY_QUERY=body` or
 `--commands:httpBody:query=body` renames `echo_body` to `body`.
 
 Logs use Go `slog` JSON on stdout through Echo's `RequestLogger` middleware.
@@ -131,12 +133,12 @@ precedence as the other configuration. Commented examples are in `.env.example`.
 
 | Environment variable | Default | CLI flag |
 | --- | --- | --- |
-| `MIDDLEWARE__GZIP` | `false` | `--middleware:gzip` |
-| `MIDDLEWARE__SECURE` | `false` | `--middleware:secure` |
-| `MIDDLEWARE__TIMEOUT` | `0` (disabled) | `--middleware:timeout` |
-| `MIDDLEWARE__CORS__ORIGINS` | empty (disabled) | `--middleware:cors:origins` |
-| `MIDDLEWARE__RATELIMIT__RATE` | `0` (disabled) | `--middleware:rateLimit:rate` |
-| `MIDDLEWARE__RATELIMIT__BURST` | `1` | `--middleware:rateLimit:burst` |
+| `MIDDLEWARE_GZIP` | `false` | `--middleware:gzip` |
+| `MIDDLEWARE_SECURE` | `false` | `--middleware:secure` |
+| `MIDDLEWARE_TIMEOUT` | `0` (disabled) | `--middleware:timeout` |
+| `MIDDLEWARE_CORS_ORIGINS` | empty (disabled) | `--middleware:cors:origins` |
+| `MIDDLEWARE_RATELIMIT_RATE` | `0` (disabled) | `--middleware:rateLimit:rate` |
+| `MIDDLEWARE_RATELIMIT_BURST` | `1` | `--middleware:rateLimit:burst` |
 
 - [Gzip](https://echo.labstack.com/middleware/gzip/) compresses responses for
   clients requesting gzip. Bodyless statuses remain bodyless; centralized
@@ -213,7 +215,7 @@ uses `dev`/`unknown` defaults unless linker flags are supplied.
 mise run docker:build
 docker run --rm echo-server:local --version
 docker run --rm -p 127.0.0.1:8080:8080 \
-  -e ENABLE__ENVIRONMENT=false -e ENABLE__FILE=false echo-server:local
+  -e ENABLE_ENVIRONMENT=false -e ENABLE_FILE=false echo-server:local
 ```
 
 The build stage uses `debian:13` with mise 2026.10.7 installing Go from the
@@ -288,6 +290,8 @@ The port follows upstream commit
 The HTTP controls, enable switches, command aliases, and response shape are
 preserved, with these deliberate differences:
 
+- Environment names use single underscores. Rename upstream double-underscore
+  keys in `.env` files and deployments; the old names are not recognized.
 - JSON uses Go's `encoding/json/v2`: duplicate names and invalid UTF-8 are
   rejected, and numeric request values retain their original precision.
 - A uniform 1 MiB decoded request-body limit applies. JSON objects/arrays,
@@ -298,7 +302,7 @@ preserved, with these deliberate differences:
 - Malformed custom headers and overrides of HTTP framing headers return 400.
   Files are streamed as `text/plain`; special devices are not served.
 - Log envelopes use `slog`, not Bunyan. Direct Seq transport is not ported;
-  use a stdout log collector. Enabling `LOGS__SEQ__ENABLED` fails explicitly.
+  use a stdout log collector. Enabling `LOGS_SEQ_ENABLED` fails explicitly.
 - Go-style boolean flag syntax requires `--flag=false`, not `--flag false`.
 - Deployment packaging is the Dockerfile; upstream Helm charts are not copied.
 

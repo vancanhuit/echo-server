@@ -22,9 +22,9 @@ func TestMiddlewareConfiguration(t *testing.T) {
 		t.Fatalf("middleware enabled by default: %+v", cfg)
 	}
 	env := map[string]string{
-		"MIDDLEWARE__GZIP": "true", "MIDDLEWARE__SECURE": "true", "MIDDLEWARE__TIMEOUT": "5s",
-		"MIDDLEWARE__CORS__ORIGINS":   "https://example.com, http://localhost:3000",
-		"MIDDLEWARE__RATELIMIT__RATE": "2.5", "MIDDLEWARE__RATELIMIT__BURST": "4",
+		"MIDDLEWARE_GZIP": "true", "MIDDLEWARE_SECURE": "true", "MIDDLEWARE_TIMEOUT": "5s",
+		"MIDDLEWARE_CORS_ORIGINS":   "https://example.com, http://localhost:3000",
+		"MIDDLEWARE_RATELIMIT_RATE": "2.5", "MIDDLEWARE_RATELIMIT_BURST": "4",
 	}
 	cfg, err := LoadConfig([]string{"--middleware:timeout=2s"}, func(key string) string { return env[key] }, io.Discard)
 	if err != nil {

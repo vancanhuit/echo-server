@@ -9,7 +9,7 @@ actionlint = "1.7.12"
 
 [env]
 PORT = { default = "8080" }
-LOGS__LEVEL = { default = "info" }
+LOGS_LEVEL = { default = "info" }
 _.file = ".env"
 
 [tasks.setup]

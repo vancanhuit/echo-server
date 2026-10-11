@@ -78,7 +78,7 @@ func LoadConfig(args []string, getenv func(string) string, output io.Writer) (Co
 	fs.IntVar(&c.RateBurst, "middleware:rateLimit:burst", 1, "maximum immediate requests per peer IP")
 	var envErr error
 	fs.VisitAll(func(f *flag.Flag) {
-		key := strings.ToUpper(strings.ReplaceAll(f.Name, ":", "__"))
+		key := strings.ToUpper(strings.ReplaceAll(f.Name, ":", "_"))
 		if value := getenv(key); value != "" {
 			if err := fs.Set(f.Name, value); err != nil && envErr == nil {
 				envErr = fmt.Errorf("%s: %w", key, err)
@@ -128,7 +128,7 @@ func LoadConfig(args []string, getenv func(string) string, output io.Writer) (Co
 	default:
 		return c, fmt.Errorf("invalid log format %q", c.LogFormat)
 	}
-	if enabled, _ := strconv.ParseBool(getenv("LOGS__SEQ__ENABLED")); enabled {
+	if enabled, _ := strconv.ParseBool(getenv("LOGS_SEQ_ENABLED")); enabled {
 		return c, fmt.Errorf("direct Seq transport is not supported; collect JSON stdout with your log shipper")
 	}
 	return c, nil
