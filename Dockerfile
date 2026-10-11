@@ -1,4 +1,4 @@
-FROM debian:13 AS build
+FROM --platform=$BUILDPLATFORM debian:13 AS build
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git \
@@ -16,7 +16,9 @@ COPY . .
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
-RUN mise exec go -- scripts/build.sh binary
+ARG TARGETOS
+ARG TARGETARCH
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH mise exec go -- scripts/build.sh binary
 
 FROM gcr.io/distroless/static-debian13:nonroot
 ARG VERSION=dev

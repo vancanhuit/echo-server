@@ -236,8 +236,25 @@ docker run --rm -p 127.0.0.1:8080:8080 \
   -e ENABLE_ENVIRONMENT=false -e ENABLE_FILE=false echo-server:local
 ```
 
+`docker:build` builds the native platform and loads `echo-server:local` for local
+use. To build both Linux/AMD64 and Linux/ARM64 without publishing:
+
+```sh
+mise run docker:build:multi
+```
+
+This exports a multi-platform OCI archive to `dist/echo-server-image.tar`.
+It requires Docker Buildx with a multi-platform-capable builder. Docker Engine
+29+ with the containerd image store supports this directly. On older installations:
+
+```sh
+docker buildx create --name echo-server-builder --driver docker-container --bootstrap --use
+```
+
 The build stage uses `debian:13` with mise 2026.10.7 installing Go from the
-project's pinned tool configuration. The runtime is Google's
+project's pinned tool configuration. The builder runs on `$BUILDPLATFORM` and
+cross-compiles with `TARGETOS`/`TARGETARCH`, so ARM64 builds do not require QEMU.
+The runtime is Google's
 `gcr.io/distroless/static-debian13:nonroot`, running the static binary as
 UID/GID 65532.
 Mise passes metadata as Docker build arguments; the image also records OCI
@@ -261,11 +278,14 @@ to install the tools from `mise.toml`/`mise.lock`, then runs the same tasks as l
 - **CI:** pushes to `main`, pull requests, and manual runs execute `mise run ci`.
   This installs dependencies, runs race tests, lint, OpenAPI drift checks,
   workflow and GoReleaser validation, vulnerability checks, a binary build,
-  cross-platform release snapshot builds, and the Debian/mise → Distroless build.
+  cross-platform release snapshot builds, and the AMD64/ARM64 Distroless image build.
 - **Release:** pushing a semantic-version tag such as `v1.1.0` runs
-  `mise run release`, which checks the code and publishes through
-  [GoReleaser](https://goreleaser.com/customization/builds/go/). It then runs
-  `mise run docker:publish` to publish `ghcr.io/vancanhuit/echo-server:v1.1.0`.
+  `mise run release`: checks run first, then `mise run docker:publish` builds and
+  pushes `ghcr.io/vancanhuit/echo-server:v1.1.0` as an AMD64/ARM64 manifest list.
+  Only after image publication succeeds does
+  [GoReleaser](https://goreleaser.com/customization/builds/go/) create the GitHub
+  Release and upload its archives. Image build/push failures stop the task before
+  a GitHub Release is created.
   The workflow uses GitHub's built-in token; no personal access token is required.
 
 Release archives include static binaries for Linux, macOS, and Windows on
@@ -273,7 +293,8 @@ amd64 and arm64, the README, license, and OpenAPI specification. GitHub Releases
 also include SHA-256 checksums and the standalone OpenAPI document. The `v`
 prefix is retained in release names, binary versions, archive names, and
 container tags. Prerelease tags such as `v1.2.0-rc.1` create GitHub prereleases.
-Container releases currently target Linux/amd64 and use the exact version tag.
+Container releases include Linux/AMD64 and Linux/ARM64 under the same exact
+version tag. Docker selects the matching architecture when pulling.
 
 ```sh
 mise run ci                # complete local equivalent of CI
@@ -293,9 +314,10 @@ git tag -a v1.1.0 -m "Release v1.1.0"
 git push origin v1.1.0
 ```
 
-The release task requires a clean tagged checkout and validates the version
-with GoReleaser. Never reuse an already published version tag. To publish the
-container manually after authenticating with `docker login ghcr.io`:
+The release task requires a clean tagged checkout, `VERSION` matching the tag,
+GHCR authentication, and `GITHUB_TOKEN` for GoReleaser. Never reuse an already
+published version tag. To publish only the multi-arch container manually after
+authenticating with `docker login ghcr.io`:
 
 ```sh
 VERSION=v1.1.0 mise run docker:publish
