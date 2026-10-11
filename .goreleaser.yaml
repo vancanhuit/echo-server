@@ -11,12 +11,13 @@ builds:
     goarch: [amd64, arm64]
     flags:
       - -trimpath
+      - -buildvcs=false
     ldflags:
       - >-
         -s -w
-        -X github.com/vancanhuit/echo-server/internal/buildinfo.Version=v{{ .Version }}
-        -X github.com/vancanhuit/echo-server/internal/buildinfo.Commit={{ .FullCommit }}
-        -X github.com/vancanhuit/echo-server/internal/buildinfo.Date={{ .Date }}
+        -X {{ .ModulePath }}/internal/buildinfo.Version=v{{ .Version }}
+        -X {{ .ModulePath }}/internal/buildinfo.Commit={{ .FullCommit }}
+        -X {{ .ModulePath }}/internal/buildinfo.Date={{ .Date }}
 
 archives:
   - formats: [tar.gz]

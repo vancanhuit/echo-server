@@ -221,6 +221,12 @@ VERSION=v1.1.0 COMMIT="$(git rev-parse HEAD)" BUILD_DATE=2026-10-11T00:00:00Z mi
 Metadata appears in `--version` output and startup logs. Plain `go run`/`go build`
 uses `dev`/`unknown` defaults unless linker flags are supplied.
 
+Local, Docker, and GoReleaser builds use `-trimpath -buildvcs=false` to omit
+local filesystem paths and automatic VCS stamping. Version, commit SHA, and
+build date are still injected explicitly through linker flags.
+The linker package's module path is discovered with `go list -m`; GoReleaser
+uses its equivalent `{{ .ModulePath }}` template value.
+
 ### Docker
 
 ```sh
