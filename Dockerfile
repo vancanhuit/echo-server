@@ -16,7 +16,7 @@ COPY . .
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
-RUN mise exec go -- sh scripts/build.sh binary
+RUN mise exec go -- scripts/build.sh binary
 
 FROM gcr.io/distroless/static-debian13:nonroot
 ARG VERSION=dev

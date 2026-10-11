@@ -22,7 +22,7 @@ run = "go run ./cmd/echo-server"
 
 [tasks.build]
 description = "Build the standalone binary"
-run = "sh scripts/build.sh binary"
+run = "scripts/build.sh binary"
 
 [tasks.generate]
 description = "Generate Go models from OpenAPI"
@@ -54,7 +54,7 @@ depends = ["test", "lint", "generate:check", "release:check", "workflows:check"]
 
 [tasks."docker:build"]
 description = "Build the container image"
-run = "sh scripts/build.sh docker"
+run = "scripts/build.sh docker"
 
 [tasks."workflows:check"]
 description = "Validate GitHub Actions workflows"
