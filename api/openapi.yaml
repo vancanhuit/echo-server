@@ -5,8 +5,9 @@ info:
   version: 1.0.0
   description: |
     Go port of Ealenn/Echo-Server. Every path and HTTP method echoes request
-    metadata. GET /openapi.yaml is reserved for this specification; /ping is
-    an ordinary echo route. No authentication is performed.
+    metadata. GET /openapi.yaml serves this specification; GET /swagger/ and
+    its assets serve Swagger UI. /ping is an ordinary echo route.
+    No authentication is performed.
 
     Body parsers accept JSON objects/arrays (application/json and
     application/ld+json), text/plain, URL-encoded forms, and multipart fields
@@ -32,29 +33,29 @@ info:
     File and environment access are enabled by default for upstream compatibility.
     These expose the process environment and files readable by the process.
 servers:
-  - url: http://localhost:8080
+  - url: /
 tags:
   - name: echo
     description: Request inspection and response controls
   - name: documentation
-    description: Embedded API specification
+    description: Embedded API specification and Swagger UI
 paths:
   /:
-    parameters: &controls
-      - $ref: '#/components/parameters/RequestID'
-      - $ref: '#/components/parameters/CodeQuery'
-      - $ref: '#/components/parameters/CodeHeader'
-      - $ref: '#/components/parameters/BodyQuery'
-      - $ref: '#/components/parameters/BodyHeader'
-      - $ref: '#/components/parameters/EnvQuery'
-      - $ref: '#/components/parameters/EnvHeader'
-      - $ref: '#/components/parameters/HeadersQuery'
-      - $ref: '#/components/parameters/HeadersHeader'
-      - $ref: '#/components/parameters/TimeQuery'
-      - $ref: '#/components/parameters/TimeHeader'
-      - $ref: '#/components/parameters/FileQuery'
-      - $ref: '#/components/parameters/FileHeader'
     get: &echo
+      parameters: &controls
+        - $ref: '#/components/parameters/RequestID'
+        - $ref: '#/components/parameters/CodeQuery'
+        - $ref: '#/components/parameters/CodeHeader'
+        - $ref: '#/components/parameters/BodyQuery'
+        - $ref: '#/components/parameters/BodyHeader'
+        - $ref: '#/components/parameters/EnvQuery'
+        - $ref: '#/components/parameters/EnvHeader'
+        - $ref: '#/components/parameters/HeadersQuery'
+        - $ref: '#/components/parameters/HeadersHeader'
+        - $ref: '#/components/parameters/TimeQuery'
+        - $ref: '#/components/parameters/TimeHeader'
+        - $ref: '#/components/parameters/FileQuery'
+        - $ref: '#/components/parameters/FileHeader'
       tags: [echo]
       summary: Echo the request or return a controlled response
       responses:
@@ -63,7 +64,14 @@ paths:
         default:
           $ref: '#/components/responses/Echo'
     post: &echoBody
-      <<: *echo
+      parameters: *controls
+      tags: [echo]
+      summary: Echo the request or return a controlled response
+      responses:
+        '200':
+          $ref: '#/components/responses/Echo'
+        default:
+          $ref: '#/components/responses/Echo'
       requestBody:
         required: false
         content:
@@ -83,6 +91,7 @@ paths:
     options: *echo
     trace: *echo
     head: &head
+      parameters: *controls
       tags: [echo]
       summary: Return controlled status and headers without a body
       responses:
@@ -96,23 +105,10 @@ paths:
       The runtime wildcard also accepts multiple path segments and nonstandard
       HTTP methods. OpenAPI path parameters describe only a single segment.
     parameters:
-      - $ref: '#/components/parameters/RequestID'
       - name: path
         in: path
         required: true
         schema: {type: string}
-      - $ref: '#/components/parameters/CodeQuery'
-      - $ref: '#/components/parameters/CodeHeader'
-      - $ref: '#/components/parameters/BodyQuery'
-      - $ref: '#/components/parameters/BodyHeader'
-      - $ref: '#/components/parameters/EnvQuery'
-      - $ref: '#/components/parameters/EnvHeader'
-      - $ref: '#/components/parameters/HeadersQuery'
-      - $ref: '#/components/parameters/HeadersHeader'
-      - $ref: '#/components/parameters/TimeQuery'
-      - $ref: '#/components/parameters/TimeHeader'
-      - $ref: '#/components/parameters/FileQuery'
-      - $ref: '#/components/parameters/FileHeader'
     get: *echo
     post: *echoBody
     put: *echoBody
@@ -145,6 +141,33 @@ paths:
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
+  /swagger:
+    get: &swaggerRedirect
+      tags: [documentation]
+      summary: Redirect to Swagger UI
+      responses:
+        '308':
+          description: Permanent redirect to /swagger/
+          headers:
+            Location:
+              schema: {type: string, const: '/swagger/'}
+    head: *swaggerRedirect
+  /swagger/:
+    get:
+      tags: [documentation]
+      summary: Open interactive Swagger UI
+      responses:
+        '200':
+          description: Swagger UI backed by the same-origin OpenAPI specification
+          content:
+            text/html:
+              schema: {type: string}
+    head:
+      tags: [documentation]
+      summary: Check that Swagger UI is available
+      responses:
+        '200':
+          description: No response body
 components:
   headers:
     RequestID:

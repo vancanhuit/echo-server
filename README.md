@@ -24,6 +24,10 @@ curl 'http://localhost:8080/?echo_code=201&echo_body={"ok":true}' --globoff
 curl http://localhost:8080/openapi.yaml
 ```
 
+Open **[Swagger UI](http://localhost:8080/swagger/)** to browse the OpenAPI 3.1
+documentation and send requests using **Try it out**. `/swagger` redirects to
+`/swagger/`. The UI targets the server's current origin, including custom ports.
+
 The example environment disables environment and filesystem exposure. Without
 those overrides, both features are **enabled**, matching upstream: callers can
 read process environment values and any file accessible to the server user.
@@ -179,6 +183,14 @@ specification before generation and supports OpenAPI 3.1 natively. Routes are re
 Echo v5 to preserve wildcard and arbitrary-method behavior. OpenAPI represents
 the root and a path parameter; the runtime also accepts multi-segment paths.
 The specification describes default command names and delay bounds.
+
+Swagger UI v5 is served at `/swagger/` using
+[`swgui/v5emb`](https://github.com/swaggest/swgui). Its JavaScript, CSS, and
+icons are embedded in the Go binary, so the standalone binary and Distroless
+image work without a CDN. Online specification validation is disabled. The
+documentation routes use the server's request IDs, logging, and optional
+security middleware; configured rate limits also apply to UI and asset requests.
+Swagger's asset handler handles compression itself to avoid double gzip.
 
 ```sh
 mise run generate        # regenerate models after spec changes

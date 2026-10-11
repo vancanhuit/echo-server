@@ -15,6 +15,7 @@ import (
 
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"github.com/swaggest/swgui/v5emb"
 	"github.com/vancanhuit/echo-server/api"
 	"golang.org/x/net/http/httpguts"
 )
@@ -43,11 +44,40 @@ func New(cfg Config, logger *slog.Logger) *echo.Echo {
 		e.Use(middleware.ContextTimeout(cfg.Timeout))
 	}
 	if cfg.Gzip {
-		e.Use(middleware.Gzip())
+		e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+			// Swagger's embedded asset handler already negotiates compressed assets.
+			Skipper: func(c *echo.Context) bool {
+				r := c.Request()
+				return (r.Method == http.MethodGet || r.Method == http.MethodHead) && strings.HasPrefix(r.URL.Path, "/swagger/")
+			},
+		}))
 	}
 	e.GET("/openapi.yaml", func(c *echo.Context) error { return c.Blob(200, "application/yaml", api.Spec) })
 	e.HEAD("/openapi.yaml", func(c *echo.Context) error { return c.NoContent(200) })
 	handler := func(c *echo.Context) error { return handle(c, cfg) }
+	e.Any("/swagger", func(c *echo.Context) error {
+		if c.Request().Method == http.MethodGet || c.Request().Method == http.MethodHead {
+			return c.Redirect(http.StatusPermanentRedirect, "/swagger/")
+		}
+		return handler(c)
+	})
+	swaggerUI := echo.WrapHandler(v5emb.New("Echo Server API", "/openapi.yaml", "/swagger/"))
+	e.Any("/swagger/*", func(c *echo.Context) error {
+		switch c.Request().Method {
+		case http.MethodGet:
+			return swaggerUI(c)
+		case http.MethodHead:
+			if c.Request().URL.Path == "/swagger/" {
+				c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTML)
+				return c.NoContent(http.StatusOK)
+			}
+			return swaggerUI(c)
+		default:
+			return handler(c)
+		}
+	})
+	e.RouteNotFound("/swagger", handler)
+	e.RouteNotFound("/swagger/*", handler)
 	e.Any("/*", handler)
 	// Unknown HTTP methods should echo too, just as Express app.all('*') does.
 	e.RouteNotFound("/*", handler)
