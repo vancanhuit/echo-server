@@ -300,19 +300,27 @@ version tag. Docker selects the matching architecture when pulling.
 mise run ci                # complete local equivalent of CI
 mise run release:check     # validate GoReleaser configuration
 mise run release:snapshot  # build archives in dist/ without publishing
+mise run version:next      # preview the next semantic version
 ```
 
-Choose each version according to SemVer: patch for fixes, minor for compatible
-features, major for breaking changes. Version bumps are explicit Git tags;
-commit messages do not automatically create releases.
+[svu](https://github.com/caarlos0/svu), pinned in mise, calculates the next
+semantic version from Conventional Commits since the previous tag: `fix:` bumps
+patch, `feat:` bumps minor, and `!` or a `BREAKING CHANGE:` footer bumps major.
+Other commit types do not bump the version. The `v` prefix is explicitly
+retained. CI previews the next version without creating a tag.
 
-To publish a tested commit on `main`:
+After CI passes for the commit on `main`, create and push its calculated tag:
 
 ```sh
 git pull --ff-only
-git tag -a v1.1.0 -m "Release v1.1.0"
-git push origin v1.1.0
+git fetch --tags
+mise run version:next
+mise run release:tag
 ```
+
+`release:tag` requires a clean working tree, creates an annotated tag using
+`svu next`, and pushes it to `origin` to trigger the release workflow. It does
+not overwrite existing tags or wait for CI itself.
 
 The release task requires a clean tagged checkout, `VERSION` matching the tag,
 GHCR authentication, and `GITHUB_TOKEN` for GoReleaser. Never reuse an already
